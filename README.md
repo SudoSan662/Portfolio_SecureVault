@@ -1,8 +1,8 @@
-# 🔐 SecureVault
+# 🔐 Portfolio SecureVault
 
 Zero-Knowledge Passwort-Manager · AES-256-GCM · GitHub als verschlüsselter Cloud-Speicher.
 
-[![Live Demo](https://img.shields.io/badge/Live-GitHub%20Pages-00e07a?style=flat-square&logo=github)](https://DEIN-USERNAME.github.io/securevault/)
+[![Live Demo](https://img.shields.io/badge/Live-GitHub%20Pages-00e07a?style=flat-square&logo=github)](https://SudoSan662.github.io/Portfolio_SecureVault/)
 [![Security](https://img.shields.io/badge/Crypto-AES--256--GCM-00e07a?style=flat-square)]()
 [![Zero Knowledge](https://img.shields.io/badge/Architecture-Zero--Knowledge-00e07a?style=flat-square)]()
 [![Tests](https://img.shields.io/badge/Security%20Tests-59%20passed%20·%200%20failed-00e07a?style=flat-square)]()
@@ -77,7 +77,19 @@ Passwörter direkt in Login-Felder einfügen ohne Copy-Paste. Die Extension erke
 
 ---
 
-### 🕊️ Milestone 3 · Nachlass-Funktion (Digital Legacy)
+### 🗂️ Milestone 3 · Granulare Projekt-Zugriffskontrolle
+> Status: 🔵 Geplant · Aufwand: ~3 Wochen
+
+Ein Freelancer soll nur Projekt "Autohaus" sehen, nicht alle anderen Kundenprojekte. Mit M4 bekommt jedes Projekt einen eigenen Verschlüsselungs-Key — User erhalten nur die Keys der Projekte auf die sie Zugriff haben.
+
+- Per-Project Keys — jedes Projekt hat eigenen AES-256-GCM Key
+- Rollen-System: **Admin · Member · Viewer · Freelancer** (zeitlich begrenzt)
+- Admin vergibt und entzieht Projektzugänge
+- Key-Rotation bei Offboarding
+- Migration bestehender Vaults automatisch
+---
+
+### 🕊️ Milestone 4 · Nachlass-Funktion (Digital Legacy)
 > Status: 🔵 Geplant · Aufwand: ~4 Wochen
 
 Falls der Vault-Eigentümer den Zugang verliert, soll eine vorher bestimmte Vertrauensperson Zugang erhalten — ohne dass diese Person heute schon Zugang hat.
@@ -89,18 +101,6 @@ Falls der Vault-Eigentümer den Zugang verliert, soll eine vorher bestimmte Vert
 - Recovery Code für den Eigentümer zum jederzeitigen Zurücksetzen
 - Verschlüsselter Legacy-Key in separater Datei `legacy.enc` im Repo
 
----
-
-### 🗂️ Milestone 4 · Granulare Projekt-Zugriffskontrolle
-> Status: 🔵 Geplant · Aufwand: ~3 Wochen
-
-Ein Freelancer soll nur Projekt "Autohaus" sehen, nicht alle anderen Kundenprojekte. Mit M4 bekommt jedes Projekt einen eigenen Verschlüsselungs-Key — User erhalten nur die Keys der Projekte auf die sie Zugriff haben.
-
-- Per-Project Keys — jedes Projekt hat eigenen AES-256-GCM Key
-- Rollen-System: **Admin · Member · Viewer · Freelancer** (zeitlich begrenzt)
-- Admin vergibt und entzieht Projektzugänge
-- Key-Rotation bei Offboarding
-- Migration bestehender Vaults automatisch
 
 ---
 
@@ -189,19 +189,19 @@ Konflikt-Dialog:
 
 ```bash
 # GitHub CLI
-gh repo create securevault --public --clone
-cd securevault
+gh repo create Portfolio_SecureVault --public --clone
+cd Portfolio_SecureVault
 
-# oder manuell: github.com → New repository → securevault
-git clone https://github.com/DEIN-USERNAME/securevault.git
-cd securevault
+# oder manuell: github.com → New repository → Portfolio_SecureVault
+git clone https://github.com/SudoSan662/Portfolio_SecureVault.git
+cd Portfolio_SecureVault
 ```
 
 ### Schritt 2 — Dateien hinzufügen
 
 ```bash
 git add index.html
-git commit -m "🔐 SecureVault — initial deploy"
+git commit -m "🔐 Portfolio_SecureVault — initial deploy"
 git push origin main
 ```
 
@@ -214,7 +214,7 @@ GitHub Repo → Settings → Pages
 → Save
 ```
 
-Nach ~60 Sekunden live unter `https://DEIN-USERNAME.github.io/securevault/`
+Nach ~60 Sekunden live unter `https://SudoSan662.github.io/Portfolio-SecureVault/`
 
 ---
 
@@ -225,7 +225,7 @@ github.com/settings/personal-access-tokens/new
 
 Token name:        SecureVault
 Expiration:        365 Tage (oder Projektdauer für externe User)
-Repository access: Only select repositories → securevault
+Repository access: Only select repositories → Portfolio_SecureVault
 Permissions:
   → Contents:  Read and Write
   → Metadata:  Read (automatisch)
@@ -263,7 +263,7 @@ Permissions:
 - **Fine-grained Access Control** — Token nur für dieses eine Repo
 - **Sofortiger Zugangsentzug** — Token deaktivieren = kein Zugang mehr
 
-*Tradeoffs: Metadaten-Exposition (Sync-Zeitpunkte sichtbar), kein Granular-Access auf Eintrags-Ebene (kommt mit M4), API Rate Limits bei vielen gleichzeitigen Nutzern.*
+*Tradeoffs: Metadaten-Exposition (Sync-Zeitpunkte sichtbar), kein Granular-Access auf Eintrags-Ebene (kommt mit M3), API Rate Limits bei vielen gleichzeitigen Nutzern.*
 
 ---
 
