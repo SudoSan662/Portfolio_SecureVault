@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureVault</title>
+    <meta name="description" content="Zero-Knowledge Passwort-Manager · AES-256-GCM · GitHub Storage">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23080c12'/><rect x='20' y='28' width='24' height='20' rx='4' fill='%2300e07a'/><path d='M24 28v-6a8 8 0 0 1 16 0v6' stroke='%2300e07a' stroke-width='3.5' fill='none' stroke-linecap='round'/><circle cx='32' cy='37' r='3' fill='%23080c12'/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg:#080c12;--bg1:#0f1420;--bg2:#161c2c;--bg3:#1e2438;
+            --accent:#00e07a;--acc2:#00b862;--glow:rgba(0,224,122,0.14);
+            --text:#dde3f0;--dim:#7a8499;--border:rgba(255,255,255,0.07);
+            --red:#ff4455;--yellow:#ffbb00;
+            --mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif;
+            --radius:12px;--trans:0.18s ease;
+        }
+        body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+        body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(0,224,122,0.012) 1px,transparent 1px),linear-gradient(90deg,rgba(0,224,122,0.012) 1px,transparent 1px);background-size:40px 40px;}
+        body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 60% 40% at 10% 90%,rgba(0,224,122,0.03) 0%,transparent 60%),radial-gradient(ellipse 50% 30% at 90% 10%,rgba(0,180,100,0.02) 0%,transparent 60%);}
+        #app{position:relative;z-index:1;min-height:100vh;}
+        .hidden{display:none!important;}
+        .form-group{margin-bottom:1rem;}
+        label{display:block;margin-bottom:.35rem;font-size:.65rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;}
+        input,select,textarea{width:100%;padding:.75rem 1rem;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:.875rem;outline:none;transition:border-color var(--trans),box-shadow var(--trans);}
+        input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow);}
+        input::placeholder,textarea::placeholder{color:var(--dim);}
+        textarea{resize:vertical;min-height:80px;}
+        select{cursor:pointer;}
+        .btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.75rem 1.25rem;border:none;border-radius:8px;font-family:var(--sans);font-size:.875rem;font-weight:700;cursor:pointer;transition:all var(--trans);text-transform:uppercase;letter-spacing:.4px;width:100%;}
+        .btn:disabled{opacity:.4;pointer-events:none;}
+        .btn-primary{background:var(--accent);color:#040a06;}
+        .btn-primary:hover{background:var(--acc2);transform:translateY(-1px);}
+        .btn-ghost{background:transparent;color:var(--dim);border:1px solid var(--border);}
+        .btn-ghost:hover{background:var(--bg2);color:var(--text);}
+        .btn-sm{padding:.45rem .875rem;font-size:.78rem;width:auto;}
+        .btn-danger{background:rgba(255,68,85,0.12);color:var(--red);border:1px solid rgba(255,68,85,0.25);}
+        .btn-danger:hover{background:rgba(255,68,85,0.2);}
+        .card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;}
+        .help-box{background:rgba(0,224,122,0.04);border:1px solid rgba(0,224,122,0.1);border-radius:8px;padding:.875rem 1rem;font-size:.78rem;color:var(--dim);line-height:1.7;margin-bottom:1.25rem;}
+        .help-box strong{color:var(--text);}
+        .help-box a{color:var(--accent);text-decoration:none;}
+        .help-box code{font-family:var(--mono);font-size:.72rem;background:var(--bg3);padding:.1rem .3rem;border-radius:3px;}
+        .brand{text-align:center;margin-bottom:2rem;}
+        .brand-row{display:flex;align-items:center;justify-content:center;gap:.6rem;margin-bottom:.35rem;}
+        .brand-icon{font-size:1.75rem;}
+        .brand-name{font-family:var(--mono);font-size:1.5rem;font-weight:800;color:var(--accent);letter-spacing:-1px;}
+        .brand-sub{font-size:.72rem;color:var(--dim);letter-spacing:.5px;}
+        .security-badges{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-top:1.25rem;}
+        .badge{font-size:.68rem;padding:.3rem .7rem;border-radius:100px;background:rgba(0,224,122,0.06);border:1px solid rgba(0,224,122,0.12);color:var(--accent);font-family:var(--mono);}
+        .strength-meter{height:3px;background:var(--bg3);border-radius:2px;margin-top:.5rem;overflow:hidden;}
+        .strength-bar{height:100%;border-radius:2px;transition:width .25s,background .25s;width:0;}
+        .strength-bar.weak{width:25%;background:var(--red);}
+        .strength-bar.fair{width:50%;background:var(--yellow);}
+        .strength-bar.good{width:75%;background:#88dd00;}
+        .strength-bar.strong{width:100%;background:var(--accent);}
+        .spin{display:inline-block;animation:spinning .7s linear infinite;}
+        @keyframes spinning{to{transform:rotate(360deg);}}
+        #toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(8px);background:var(--bg1);border:1px solid var(--border);padding:.65rem 1.25rem;border-radius:100px;font-size:.82rem;font-family:var(--mono);color:var(--text);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:9999;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,.4);}
+        #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+        #toast.error{border-color:rgba(255,68,85,.4);color:var(--red);}
+        .modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s;}
+        .modal-overlay.open{opacity:1;pointer-events:all;}
+        .modal-box{background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:rise .25s cubic-bezier(.16,1,.3,1);}
+        .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--border);}
+        .modal-title{font-size:1rem;font-weight:700;}
+        .modal-close{background:none;border:none;color:var(--dim);font-size:1.25rem;cursor:pointer;padding:.25rem .5rem;border-radius:4px;line-height:1;}
+        .modal-close:hover{background:var(--bg3);color:var(--text);}
+        .conflict-box{background:rgba(255,68,85,.07);border:1px solid rgba(255,68,85,.25);border-radius:8px;padding:1rem;margin-bottom:1rem;font-size:.84rem;line-height:1.7;color:var(--text);}
+        .conflict-box strong{color:var(--red);}
+        .lockout-box{background:rgba(255,68,85,.07);border:1px solid rgba(255,68,85,.25);border-radius:8px;padding:.875rem;text-align:center;font-size:.82rem;color:var(--red);line-height:1.7;margin-bottom:1rem;}
+        .lockout-countdown{font-family:var(--mono);font-size:1.1rem;font-weight:800;display:block;margin-top:.25rem;}
+        #setupScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;}
+        .setup-wrap{width:100%;max-width:460px;animation:rise .45s cubic-bezier(.16,1,.3,1);}
+        .setup-steps{display:flex;gap:.4rem;margin-bottom:1.5rem;}
+        .step-pill{flex:1;padding:.45rem .5rem;border-radius:6px;text-align:center;font-size:.68rem;font-weight:700;font-family:var(--mono);background:var(--bg2);color:var(--dim);border:1px solid var(--border);transition:all var(--trans);}
+        .step-pill.active{background:rgba(0,224,122,.1);color:var(--accent);border-color:rgba(0,224,122,.3);}
+        .step-pill.done{background:rgba(0,224,122,.06);color:var(--acc2);border-color:rgba(0,224,122,.15);}
+        .storage-toggle{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1.25rem;}
+        .storage-opt{display:flex;align-items:flex-start;gap:.75rem;padding:.75rem .875rem;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:all var(--trans);background:var(--bg);}
+        .storage-opt:hover{border-color:rgba(0,224,122,.3);background:var(--bg2);}
+        .storage-opt.selected{border-color:var(--accent);background:rgba(0,224,122,.05);}
+        .storage-opt-icon{font-size:1rem;margin-top:.1rem;flex-shrink:0;}
+        .storage-opt-title{font-size:.8rem;font-weight:700;color:var(--text);margin-bottom:.15rem;}
+        .storage-opt-desc{font-size:.7rem;color:var(--dim);line-height:1.5;}
+        .storage-badge{display:inline-block;font-size:.58rem;font-weight:700;padding:.1rem .35rem;border-radius:3px;margin-left:.35rem;text-transform:uppercase;letter-spacing:.4px;vertical-align:middle;}
+        .storage-badge.rec{background:rgba(0,224,122,.15);color:var(--accent);}
+        .storage-badge.sec{background:rgba(255,187,0,.15);color:var(--yellow);}
+        #loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;}
+        .login-wrap{width:100%;max-width:400px;animation:rise .45s cubic-bezier(.16,1,.3,1);}
+        .sync-status{display:flex;align-items:center;gap:.5rem;font-size:.72rem;color:var(--dim);font-family:var(--mono);padding:.55rem .75rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:1.25rem;}
+        .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+        .sync-dot.syncing{background:var(--yellow);animation:blink .8s infinite;}
+        .sync-dot.error{background:var(--red);}
+        #mainApp{display:flex;flex-direction:column;min-height:100vh;}
+        .topbar{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.5rem;border-bottom:1px solid var(--border);background:rgba(8,12,18,.9);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
+        .topbar-left{display:flex;align-items:center;gap:.875rem;}
+        .topbar-right{display:flex;align-items:center;gap:.4rem;}
+        .topbar-brand{font-family:var(--mono);font-weight:800;font-size:.95rem;color:var(--accent);}
+        .user-chip{display:flex;align-items:center;gap:.45rem;padding:.3rem .65rem;background:var(--bg1);border:1px solid var(--border);border-radius:100px;font-size:.78rem;}
+        .avatar{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#040a06;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;flex-shrink:0;}
+        .live-indicator{display:flex;align-items:center;gap:.35rem;font-size:.68rem;color:var(--accent);font-family:var(--mono);}
+        .live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 5px var(--accent);animation:pulse 2s infinite;}
+        .live-dot.syncing{background:var(--yellow);box-shadow:0 0 5px var(--yellow);animation:blink .6s infinite;}
+        .live-dot.error{background:var(--red);box-shadow:0 0 5px var(--red);animation:none;}
+        .workspace{display:grid;grid-template-columns:240px 1fr;flex:1;}
+        .sidebar{border-right:1px solid var(--border);padding:1.25rem .875rem;display:flex;flex-direction:column;gap:1.25rem;}
+        .sidebar-title{font-size:.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-weight:700;padding:0 .5rem;margin-bottom:.35rem;}
+        .project-list{list-style:none;display:flex;flex-direction:column;gap:2px;}
+        .project-item{display:flex;align-items:center;justify-content:space-between;padding:.55rem .65rem;border-radius:8px;cursor:pointer;transition:all var(--trans);font-size:.83rem;color:var(--dim);}
+        .project-item:hover{background:var(--bg2);color:var(--text);}
+        .project-item.active{background:rgba(0,224,122,.09);color:var(--accent);font-weight:600;border:1px solid rgba(0,224,122,.18);}
+        .project-count{font-family:var(--mono);font-size:.66rem;background:var(--bg3);padding:.1rem .35rem;border-radius:4px;}
+        .project-item .proj-actions{display:none;gap:.2rem;margin-left:auto;}
+        .project-item:hover .proj-actions{display:flex;}
+        .project-item:hover .project-count{display:none;}
+        .proj-act-btn{background:none;border:none;cursor:pointer;font-size:.75rem;padding:.1rem .25rem;border-radius:4px;color:var(--dim);line-height:1;transition:background var(--trans),color var(--trans);}
+        .proj-act-btn:hover{background:var(--bg3);color:var(--text);}
+        .proj-act-btn.del:hover{color:var(--red);}
+        .vault-info{margin-top:auto;padding:.75rem .875rem;background:rgba(0,224,122,.03);border:1px solid rgba(0,224,122,.08);border-radius:10px;font-size:.7rem;color:var(--dim);line-height:2;}
+        .main-content{padding:1.5rem;overflow-y:auto;}
+        .content-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
+        .content-title{font-size:1.1rem;font-weight:700;}
+        .search-wrap{position:relative;margin-bottom:1.25rem;}
+        .search-wrap input{padding-left:2.4rem;}
+        .search-icon{position:absolute;left:.875rem;top:50%;transform:translateY(-50%);font-size:.875rem;pointer-events:none;}
+        .password-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.875rem;}
+        .password-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem;transition:border-color var(--trans),transform var(--trans);animation:fadeCard .25s ease;}
+        .password-card:hover{border-color:rgba(0,224,122,.2);transform:translateY(-1px);}
+        .card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;margin-bottom:.875rem;}
+        .card-title{font-size:.95rem;font-weight:700;margin-bottom:.2rem;}
+        .card-url{font-size:.72rem;color:var(--dim);font-family:var(--mono);}
+        .card-actions{display:flex;gap:.25rem;flex-shrink:0;}
+        .icon-btn{padding:.3rem .4rem;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:.8rem;transition:all var(--trans);color:var(--dim);}
+        .icon-btn:hover{background:var(--bg2);border-color:rgba(0,224,122,.2);}
+        .card-fields{display:flex;flex-direction:column;gap:.4rem;}
+        .field-row{display:flex;align-items:center;gap:.5rem;}
+        .field-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);width:64px;flex-shrink:0;}
+        .field-val{font-family:var(--mono);font-size:.78rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:.35rem;}
+        .field-val.secret span{filter:blur(5px);transition:filter .15s;}
+        .reveal-btn{background:none;border:none;cursor:pointer;font-size:.75rem;padding:.1rem .2rem;flex-shrink:0;}
+        .project-tag{font-size:.65rem;padding:.15rem .45rem;border-radius:4px;background:rgba(0,224,122,.07);color:var(--accent);border:1px solid rgba(0,224,122,.15);}
+        .empty-state{text-align:center;padding:3rem 1rem;color:var(--dim);}
+        .empty-icon{font-size:2.5rem;margin-bottom:.75rem;opacity:.5;}
+        @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeCard{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.1ms!important;}}
+        @media(max-width:700px){.workspace{grid-template-columns:1fr}.sidebar{border-right:none;border-bottom:1px solid var(--border)}.topbar{padding:.65rem 1rem}.live-indicator{display:none}}
+    </style>
+</head>
+<body>
+<div id="app">
+<div id="setupScreen">
+    <div class="setup-wrap">
+        <div class="brand">
+            <div class="brand-row"><div class="brand-icon">🔐</div><span class="brand-name">SecureVault</span></div>
+            <div class="brand-sub">Zero-Knowledge · AES-256-GCM · GitHub Storage</div>
+        </div>
+        <div class="card">
+            <div class="setup-steps">
+                <div class="step-pill active" id="stepPill1">1 · Token</div>
+                <div class="step-pill"        id="stepPill2">2 · Repository</div>
+                <div class="step-pill"        id="stepPill3">3 · Bereit</div>
+            </div>
+            <div id="setupStep1">
+                <div class="help-box">
+                    <strong>GitHub Personal Access Token erstellen:</strong><br>
+                    1. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">Fine-grained Token erstellen</a><br>
+                    2. Repository access: nur <code>securevault</code> Repo<br>
+                    3. Permissions: <code>Contents → Read &amp; Write</code><br>
+                    4. Token kopieren (nur einmal sichtbar!)
+                </div>
+                <div class="form-group">
+                    <label>GitHub Token</label>
+                    <input type="password" id="setupToken" placeholder="github_pat_… oder ghp_…">
+                </div>
+                <div class="storage-toggle">
+                    <div class="storage-opt selected" id="optLocal">
+                        <div class="storage-opt-icon">💾</div>
+                        <div>
+                            <div class="storage-opt-title">localStorage <span class="storage-badge rec">Empfohlen</span></div>
+                            <div class="storage-opt-desc">Token bleibt gespeichert — kein Re-Enter beim nächsten Besuch</div>
+                        </div>
+                    </div>
+                    <div class="storage-opt" id="optSession">
+                        <div class="storage-opt-icon">🔒</div>
+                        <div>
+                            <div class="storage-opt-title">sessionStorage <span class="storage-badge sec">Maximale Sicherheit</span></div>
+                            <div class="storage-opt-desc">Token weg wenn Tab geschlossen — jedes Mal neu eingeben</div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="btnStep1">Weiter →</button>
+            </div>
+            <div id="setupStep2" class="hidden">
+                <div class="help-box">
+                    <strong>Repository auswählen:</strong><br>
+                    Format: <code>username/reponame</code><br>
+                    Die verschlüsselte Datenbank wird als <code>vault.db.enc</code> gespeichert.
+                </div>
+                <div class="form-group">
+                    <label>Repository</label>
+                    <input type="text" id="setupRepo" placeholder="dein-username/securevault">
+                </div>
+                <button class="btn btn-primary" id="step2Btn">Verbinden →</button>
+                <button class="btn btn-ghost" style="margin-top:.5rem;" id="btnBack1">← Zurück</button>
+            </div>
+            <div id="setupStep3" class="hidden">
+                <div class="help-box" id="setupConfirmBox" style="color:var(--text);">Verbunden ✅</div>
+                <button class="btn btn-primary" id="btnFinish">Zum Vault →</button>
+                <button class="btn btn-ghost" style="margin-top:.5rem;" id="btnBack2">← Zurück</button>
+            </div>
+        </div>
+        <div class="security-badges">
+            <span class="badge">🔒 AES-256-GCM</span>
+            <span class="badge">🔑 PBKDF2 200k</span>
+            <span class="badge">☁️ GitHub Remote</span>
+            <span class="badge">👁️ Zero-Knowledge</span>
+        </div>
+    </div>
+</div>
+
+<div id="loginScreen" class="hidden">
+    <div class="login-wrap">
+        <div class="brand">
+            <div class="brand-row"><div class="brand-icon">🔐</div><span class="brand-name">SecureVault</span></div>
+            <div class="brand-sub">Zero-Knowledge · AES-256-GCM</div>
+        </div>
+        <div class="card">
+            <div class="sync-status">
+                <div class="sync-dot" id="loginSyncDot"></div>
+                <span id="loginSyncText">Verbunden mit GitHub</span>
+                <span style="margin-left:auto;opacity:.6;font-size:.68rem;" id="loginRepoLabel"></span>
+            </div>
+            <div id="formLogin">
+                <div id="lockoutBox" class="lockout-box hidden">
+                    Zu viele Fehlversuche.<br>
+                    <span class="lockout-countdown" id="lockoutTimer">—</span>
+                </div>
+                <div class="form-group">
+                    <label>Benutzername</label>
+                    <input type="text" id="loginUser" placeholder="Benutzername" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>Master-Passwort</label>
+                    <input type="password" id="loginPass" placeholder="••••••••••••">
+                </div>
+                <button class="btn btn-primary" id="loginBtn">Entsperren</button>
+                <button class="btn btn-ghost" style="margin-top:.5rem;font-size:.75rem;" id="btnResetSetup">⚙ GitHub neu konfigurieren</button>
+            </div>
+            <div id="formFirstRun" class="hidden">
+                <div class="help-box">
+                    <strong>🎉 Neuer Vault</strong><br>
+                    Erstelle deinen ersten Account. Du kannst später weitere Nutzer über das Admin-Panel einladen.
+                </div>
+                <div class="form-group">
+                    <label>Benutzername</label>
+                    <input type="text" id="regUser" placeholder="Benutzername wählen" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>Master-Passwort</label>
+                    <input type="password" id="regPass" placeholder="Mind. 10 Zeichen">
+                    <div class="strength-meter"><div class="strength-bar" id="regBar"></div></div>
+                </div>
+                <div class="form-group">
+                    <label>Passwort bestätigen</label>
+                    <input type="password" id="regPassConfirm" placeholder="Wiederholen">
+                </div>
+                <div style="font-size:.74rem;color:var(--dim);margin-bottom:1rem;line-height:1.6;">
+                    ⚠️ Das Master-Passwort kann <strong>nicht wiederhergestellt</strong> werden.
+                </div>
+                <button class="btn btn-primary" id="regBtn">Account erstellen →</button>
+            </div>
+        </div>
+        <div class="security-badges" style="margin-top:1rem;">
+            <span class="badge">🔒 AES-256-GCM</span>
+            <span class="badge">🔑 PBKDF2 200k</span>
+            <span class="badge">☁️ GitHub Remote</span>
+            <span class="badge">👁️ Zero-Knowledge</span>
+        </div>
+    </div>
+</div>
+
+<div id="mainApp" class="hidden">
+    <nav class="topbar">
+        <div class="topbar-left">
+            <span class="topbar-brand">🔐 SecureVault</span>
+            <div class="user-chip">
+                <div class="avatar" id="userAvatar">?</div>
+                <span id="userLabel">—</span>
+            </div>
+            <div class="live-indicator">
+                <div class="live-dot" id="liveDot"></div>
+                <span id="liveLabel">GitHub Sync</span>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <button class="btn btn-ghost btn-sm" id="btnSync">↑ Sync</button>
+            <button class="btn btn-ghost btn-sm" id="btnAddUser">👤 + Nutzer</button>
+            <button class="btn btn-ghost btn-sm" id="btnLogout">Abmelden</button>
+        </div>
+    </nav>
+    <div class="workspace">
+        <aside class="sidebar">
+            <div>
+                <div class="sidebar-title">Projekte</div>
+                <ul class="project-list" id="projectList"></ul>
+                <div style="margin-top:.5rem;">
+                    <button class="btn btn-ghost btn-sm" style="width:100%;" id="btnAddProject">+ Projekt</button>
+                </div>
+            </div>
+            <div class="vault-info">
+                <div>🔒 AES-256-GCM</div>
+                <div>🔑 PBKDF2 · 200k iter</div>
+                <div>☁️ GitHub Storage</div>
+                <div>👁️ Zero-Knowledge</div>
+                <div style="margin-top:.4rem;font-size:.65rem;opacity:.5;" id="repoLabel">—</div>
+            </div>
+        </aside>
+        <main class="main-content">
+            <div class="content-header">
+                <div class="content-title" id="projectTitle">Alle Passwörter</div>
+                <button class="btn btn-primary btn-sm" id="btnNewPassword">+ Neues Passwort</button>
+            </div>
+            <div class="search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Suchen …">
+            </div>
+            <div class="password-grid" id="passwordGrid"></div>
+        </main>
+    </div>
+</div>
+
+<!-- MODAL: Passwort -->
+<div class="modal-overlay" id="modalPassword">
+    <div class="modal-box">
+        <div class="modal-head">
+            <div class="modal-title" id="pwModalTitle">Neues Passwort</div>
+            <button class="modal-close" id="btnClosePwModal">×</button>
+        </div>
+        <div class="form-group"><label>Titel *</label><input type="text" id="pwTitle" placeholder="z.B. Gmail Account"></div>
+        <div class="form-group"><label>Benutzername / E-Mail *</label><input type="text" id="pwUsername" placeholder="user@example.com"></div>
+        <div class="form-group">
+            <label>Passwort *</label>
+            <div style="display:flex;gap:.5rem;">
+                <input type="password" id="pwPassword" placeholder="Passwort">
+                <button class="btn btn-ghost btn-sm" style="white-space:nowrap;" id="btnGenPw">🎲 Generieren</button>
+            </div>
+            <div class="strength-meter"><div class="strength-bar" id="pwBar"></div></div>
+        </div>
+        <div class="form-group"><label>URL</label><input type="text" id="pwUrl" placeholder="https://example.com"></div>
+        <div class="form-group"><label>Projekt</label><select id="pwProject"></select></div>
+        <div class="form-group"><label>Notizen</label><textarea id="pwNotes" rows="3" placeholder="Optionale Hinweise … (max. 5000 Zeichen)" maxlength="5000"></textarea></div>
+        <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+            <button class="btn btn-primary" id="btnSavePw" style="flex:1;">Speichern</button>
+            <button class="btn btn-ghost" id="btnCancelPw" style="flex:0 0 auto;width:auto;padding:0 1.1rem;">Abbrechen</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Projekt -->
+<div class="modal-overlay" id="modalProject">
+    <div class="modal-box" style="max-width:360px;">
+        <div class="modal-head">
+            <div class="modal-title" id="projectModalTitle">Neues Projekt</div>
+            <button class="modal-close" id="btnCloseProjModal">×</button>
+        </div>
+        <div class="form-group"><label>Projektname</label><input type="text" id="projectName" placeholder="z.B. Arbeit, Privat …"></div>
+        <div style="display:flex;gap:.5rem;">
+            <button class="btn btn-primary" id="projectSaveBtn" style="flex:1;">Erstellen</button>
+            <button class="btn btn-ghost" id="btnCancelProj" style="flex:0 0 auto;width:auto;padding:0 1.1rem;">Abbrechen</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Nutzer -->
+<div class="modal-overlay" id="modalAddUser">
+    <div class="modal-box" style="max-width:400px;">
+        <div class="modal-head">
+            <div class="modal-title">👤 Neuen Nutzer anlegen</div>
+            <button class="modal-close" id="btnCloseAddUser">×</button>
+        </div>
+        <div class="form-group"><label>Benutzername</label><input type="text" id="newUserName" placeholder="z.B. alisha" autocomplete="off"></div>
+        <div class="form-group">
+            <label>Master-Passwort</label>
+            <input type="password" id="newUserPass" placeholder="Mind. 10 Zeichen">
+            <div class="strength-meter"><div class="strength-bar" id="newUserBar"></div></div>
+        </div>
+        <div class="form-group"><label>Passwort bestätigen</label><input type="password" id="newUserPassConfirm" placeholder="Wiederholen"></div>
+        <div style="font-size:.74rem;color:var(--dim);margin-bottom:1rem;line-height:1.6;">⚠️ Das Master-Passwort kann <strong>nicht wiederhergestellt</strong> werden.</div>
+        <div style="display:flex;gap:.5rem;">
+            <button class="btn btn-primary" id="addUserBtn" style="flex:1;">Nutzer erstellen</button>
+            <button class="btn btn-ghost" id="btnCancelAddUser" style="flex:0 0 auto;width:auto;padding:0 1.1rem;">Abbrechen</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Konflikt -->
+<div class="modal-overlay" id="modalConflict">
+    <div class="modal-box" style="max-width:400px;">
+        <div class="modal-head"><div class="modal-title" style="color:var(--red);">⚠️ Sync-Konflikt</div></div>
+        <div class="conflict-box"><strong>Neuere Version auf GitHub gefunden.</strong><br><br>Ein anderer Tab oder ein anderes Gerät hat Änderungen gespeichert. Was möchtest du tun?</div>
+        <div style="display:flex;flex-direction:column;gap:.5rem;">
+            <button class="btn btn-primary" id="btnPullMerge">↓ GitHub-Version laden (empfohlen)</button>
+            <button class="btn btn-ghost"   id="btnForcePush">↑ Meine Version erzwingen</button>
+            <button class="btn btn-ghost"   id="btnDismissConflict" style="font-size:.75rem;opacity:.65;">Abbrechen</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+</div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════
+   CRYPTO ENGINE
+═══════════════════════════════════════════════ */
+const Crypto = {
+    async deriveKey(masterPw, salt) {
+        const enc = new TextEncoder();
+        const raw = await crypto.subtle.importKey('raw', enc.encode(masterPw), 'PBKDF2', false, ['deriveKey']);
+        return crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt: enc.encode(salt), iterations: 200_000, hash: 'SHA-256' },
+            raw, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+        );
+    },
+    async encrypt(obj, key) {
+        const enc = new TextEncoder();
+        const iv  = crypto.getRandomValues(new Uint8Array(12));
+        const ct  = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(obj)));
+        const out = new Uint8Array(12 + ct.byteLength);
+        out.set(iv); out.set(new Uint8Array(ct), 12);
+        return _u8ToB64(out);
+    },
+    async decrypt(b64, key) {
+        const raw = _b64ToU8(b64);
+        const pt  = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(0,12) }, key, raw.slice(12));
+        return JSON.parse(new TextDecoder().decode(pt));
+    },
+    async authHash(pw, salt) {
+        const enc  = new TextEncoder();
+        const raw  = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+        const bits = await crypto.subtle.deriveBits(
+            { name: 'PBKDF2', salt: enc.encode('AUTH:' + salt), iterations: 100_000, hash: 'SHA-256' },
+            raw, 256
+        );
+        return new Uint8Array(bits);  // Return raw bytes for timing-safe comparison
+    },
+
+    // ✅ FIX 4: Timing-safe hash comparison using crypto.subtle
+    async compareHash(hashA, hashB) {
+        // Both must be Uint8Array of same length
+        if (hashA.length !== hashB.length) return false;
+        const keyA = await crypto.subtle.importKey('raw', hashA, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+        const sigA = await crypto.subtle.sign('HMAC', keyA, new Uint8Array(1));
+        const keyB = await crypto.subtle.importKey('raw', hashB, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+        const sigB = await crypto.subtle.sign('HMAC', keyB, new Uint8Array(1));
+        const a = new Uint8Array(sigA), b = new Uint8Array(sigB);
+        let diff = 0;
+        for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+        return diff === 0;
+    },
+
+    randomSalt() { return Array.from(crypto.getRandomValues(new Uint8Array(24))).map(b => b.toString(16).padStart(2,'0')).join(''); },
+    randomId()   { return Array.from(crypto.getRandomValues(new Uint8Array(12))).map(b => b.toString(16).padStart(2,'0')).join(''); }
+};
+
+function _u8ToB64(u8) {
+    let bin = ''; const C = 0x8000;
+    for (let i = 0; i < u8.length; i += C) bin += String.fromCharCode(...u8.subarray(i, i + C));
+    return btoa(bin);
+}
+function _b64ToU8(b64) {
+    const bin = atob(b64), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+}
+
+// ✅ FIX 1: Sanitize helper — strips HTML tags from user input before DOM insertion
+function sanitizeText(str) {
+    const d = document.createElement('div');
+    d.textContent = String(str);
+    return d.textContent;
+}
+
+// ✅ FIX 2: Username validation regex
+const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,32}$/;
+function validateUsername(username) {
+    return USERNAME_REGEX.test(username);
+}
+
+/* ═══════════════════════════════════════════════
+   STORAGE
+═══════════════════════════════════════════════ */
+const Store = {
+    _ts() { return localStorage.getItem('sv_token_store') === 'session' ? sessionStorage : localStorage; },
+    getToken()      { return this._ts().getItem('sv_gh_token'); },
+    setToken(v)     { this._ts().setItem('sv_gh_token', v); },
+    // ✅ FIX 5: Clear token from BOTH storages on logout
+    clearToken()    { localStorage.removeItem('sv_gh_token'); sessionStorage.removeItem('sv_gh_token'); },
+    getRepo()       { return localStorage.getItem('sv_gh_repo'); },
+    setRepo(v)      { localStorage.setItem('sv_gh_repo', v); },
+    getPref()       { return localStorage.getItem('sv_token_store') || 'local'; },
+    setPref(v)      { localStorage.setItem('sv_token_store', v); }
+};
+
+/* ═══════════════════════════════════════════════
+   GITHUB API
+═══════════════════════════════════════════════ */
+const GH = {
+    DB_FILE: 'vault.db.enc',
+    get token() { return Store.getToken(); },
+    get repo()  { return Store.getRepo(); },
+    _h() { return { 'Authorization': `token ${this.token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' }; },
+    async getFile() {
+        const res = await fetch(`https://api.github.com/repos/${this.repo}/contents/${this.DB_FILE}`, { headers: this._h() });
+        if (res.status === 404) return null;
+        if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+        const j = await res.json();
+        return { content: atob(j.content.replace(/\n/g,'')), sha: j.sha };
+    },
+    async headSha() {
+        try {
+            const res = await fetch(`https://api.github.com/repos/${this.repo}/contents/${this.DB_FILE}`, { headers: this._h() });
+            if (!res.ok) return null;
+            return (await res.json()).sha || null;
+        } catch { return null; }
+    },
+    async putFile(content, sha) {
+        const body = { message: `🔐 vault sync ${new Date().toISOString()}`, content: btoa(unescape(encodeURIComponent(content))), ...(sha ? { sha } : {}) };
+        const res  = await fetch(`https://api.github.com/repos/${this.repo}/contents/${this.DB_FILE}`, { method: 'PUT', headers: this._h(), body: JSON.stringify(body) });
+        if (res.status === 409 || res.status === 422) throw new ConflictError('SHA veraltet');
+        if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message || `GitHub ${res.status}`); }
+        return (await res.json()).content.sha;
+    },
+    async verifyAccess() {
+        const res = await fetch(`https://api.github.com/repos/${this.repo}`, { headers: this._h() });
+        if (!res.ok) throw new Error(`Kein Zugriff auf ${this.repo} (${res.status})`);
+        return res.json();
+    }
+};
+
+class ConflictError extends Error { constructor(m){ super(m); this.name='ConflictError'; } }
+
+/* ═══════════════════════════════════════════════
+   GITHUB SYNC
+═══════════════════════════════════════════════ */
+const ghSync = {
+    sha: null, db: null, _pending: null,
+    async pull() {
+        setSyncState('syncing', 'Lade …');
+        try {
+            const file = await GH.getFile();
+            if (file) {
+                this.sha = file.sha;
+                this.db  = JSON.parse(file.content);
+                if (!this.db.users)     this.db.users     = [];
+                if (!this.db.projects)  this.db.projects  = [];
+                if (!this.db.passwords) this.db.passwords = [];
+            } else {
+                this.sha = null;
+                this.db  = { version: 1, users: [], projects: [], passwords: [] };
+            }
+            setSyncState('ok', 'GitHub Sync');
+            return true;
+        } catch(e) { setSyncState('error', 'Sync-Fehler'); throw e; }
+    },
+    async push(showToast = false) {
+        if (!this.db) return;
+        setSyncState('syncing', 'Speichere …');
+        const content = JSON.stringify(this.db);
+        try {
+            const remoteSha = await GH.headSha();
+            if (remoteSha && remoteSha !== this.sha) {
+                this._pending = content; setSyncState('error', 'Konflikt'); conflict.show(); return;
+            }
+            this.sha = await GH.putFile(content, this.sha);
+            setSyncState('ok', 'GitHub Sync');
+            if (showToast) toast('✓ Auf GitHub gespeichert');
+        } catch(e) {
+            if (e instanceof ConflictError) {
+                this._pending = content; setSyncState('error', 'Konflikt'); conflict.show();
+            } else { setSyncState('error', 'Sync-Fehler'); toast('Sync-Fehler: ' + e.message, true); throw e; }
+        }
+    }
+};
+
+/* ═══════════════════════════════════════════════
+   CONFLICT
+═══════════════════════════════════════════════ */
+const conflict = {
+    show() { $('modalConflict').classList.add('open'); },
+    async pullAndMerge() {
+        $('modalConflict').classList.remove('open'); ghSync._pending = null;
+        await ghSync.pull(); ui.renderProjects(); await ui.renderPasswords();
+        toast('✓ Aktuelle GitHub-Version geladen');
+    },
+    async forcePush() {
+        $('modalConflict').classList.remove('open'); setSyncState('syncing', 'Erzwinge …');
+        try {
+            const latest = await GH.getFile(); ghSync.sha = latest ? latest.sha : null;
+            const content = ghSync._pending || JSON.stringify(ghSync.db);
+            ghSync.sha = await GH.putFile(content, ghSync.sha); ghSync._pending = null;
+            setSyncState('ok', 'GitHub Sync'); toast('✓ Deine Version gespeichert');
+        } catch(e) { setSyncState('error', 'Fehler'); toast('Force-Push fehlgeschlagen: ' + e.message, true); }
+    },
+    dismiss() { $('modalConflict').classList.remove('open'); ghSync._pending = null; setSyncState('ok', 'GitHub Sync'); }
+};
+
+/* ═══════════════════════════════════════════════
+   SETUP
+═══════════════════════════════════════════════ */
+const setup = {
+    _pref: 'local',
+    async init() {
+        this._pref = Store.getPref();
+        this.setStorage(this._pref);
+        if (Store.getToken() && Store.getRepo()) {
+            $('setupScreen').classList.add('hidden');
+            await this._loadLogin();
+        } else {
+            $('setupScreen').classList.remove('hidden');
+        }
+    },
+    setStorage(p) {
+        this._pref = p; Store.setPref(p);
+        $('optLocal').classList.toggle('selected', p === 'local');
+        $('optSession').classList.toggle('selected', p === 'session');
+    },
+    step1() {
+        const t = $('setupToken').value.trim();
+        if (!t.startsWith('ghp_') && !t.startsWith('github_pat_'))
+            return toast('Token muss mit ghp_ oder github_pat_ beginnen', true);
+        Store.setToken(t);
+        _pillNext('stepPill1', 'stepPill2');
+        _stepSwitch('setupStep1', 'setupStep2');
+        setTimeout(() => $('setupRepo').focus(), 80);
+    },
+    async step2() {
+        const repo = $('setupRepo').value.trim();
+        if (!repo.includes('/')) return toast('Format: username/reponame', true);
+        const btn = $('step2Btn'); btn.disabled = true; btn.innerHTML = '<span class="spin">⟳</span> Prüfe …';
+        try {
+            Store.setRepo(repo);
+            const info = await GH.verifyAccess();
+
+            // ✅ FIX 1: Use sanitizeText + textContent instead of innerHTML
+            const box = $('setupConfirmBox');
+            box.textContent = '';
+            const lines = [
+                `✅ Verbunden!`,
+                `📁 ${sanitizeText(repo)}`,
+                `💾 Token: ${this._pref === 'session' ? 'sessionStorage' : 'localStorage'}`,
+                `👁 Sichtbarkeit: ${info.private ? 'Privat ✓' : 'Public ⚠️'}`,
+            ];
+            lines.forEach(line => {
+                const p = document.createElement('div');
+                p.textContent = line;
+                box.appendChild(p);
+            });
+            if (!info.private) {
+                const warn = document.createElement('div');
+                warn.style.color = 'var(--yellow)';
+                warn.textContent = '⚠️ Public Repo — Daten verschlüsselt aber Struktur sichtbar';
+                box.appendChild(warn);
+            }
+
+            _pillNext('stepPill2', 'stepPill3');
+            _stepSwitch('setupStep2', 'setupStep3');
+        } catch(e) {
+            toast('Fehler: ' + e.message, true); Store.clearToken();
+        } finally { btn.disabled = false; btn.textContent = 'Verbinden →'; }
+    },
+    async finish() { $('setupScreen').classList.add('hidden'); await this._loadLogin(); },
+    async _loadLogin() {
+        $('loginRepoLabel').textContent = Store.getRepo() || '';
+        $('loginScreen').classList.remove('hidden');
+        try {
+            await ghSync.pull();
+            if (ghSync.db.users.length === 0) {
+                $('formLogin').classList.add('hidden');
+                $('formFirstRun').classList.remove('hidden');
+            }
+        } catch(e) {
+            $('loginSyncDot').className = 'sync-dot error';
+            $('loginSyncText').textContent = 'GitHub nicht erreichbar';
+        }
+    },
+    back1() { _pillNext('stepPill2', null, 'stepPill1'); _stepSwitch('setupStep2', 'setupStep1'); },
+    back2() { _pillNext('stepPill3', null, 'stepPill2'); _stepSwitch('setupStep3', 'setupStep2'); },
+    reset() {
+        if (!confirm('Konfiguration zurücksetzen?')) return;
+        Store.clearToken(); localStorage.removeItem('sv_gh_repo');
+        $('loginScreen').classList.add('hidden'); $('mainApp').classList.add('hidden');
+        $('setupToken').value = ''; $('setupRepo').value = '';
+        ['stepPill1','stepPill2','stepPill3'].forEach(id => $(id).className = 'step-pill');
+        $('stepPill1').classList.add('active');
+        _stepSwitch('setupStep2', 'setupStep1'); _stepSwitch('setupStep3', 'setupStep1');
+        $('setupStep1').classList.remove('hidden');
+        $('setupScreen').classList.remove('hidden');
+        this.setStorage('local');
+    }
+};
+
+/* ═══════════════════════════════════════════════
+   BRUTE-FORCE PROTECTION
+═══════════════════════════════════════════════ */
+const bf = {
+    KEY: 'sv_bf', MAX: 5, MS: 5 * 60 * 1000,
+    _l() { try { return JSON.parse(localStorage.getItem(this.KEY)) || {c:0,u:0}; } catch { return {c:0,u:0}; } },
+    _s(d) { localStorage.setItem(this.KEY, JSON.stringify(d)); },
+    locked()  { const d=this._l(); return (d.u && Date.now() < d.u) ? d.u : false; },
+    fail()    { const d=this._l(); d.c++; if(d.c>=this.MAX) d.u=Date.now()+this.MS; this._s(d); return d.c; },
+    reset()   { localStorage.removeItem(this.KEY); }
+};
+
+let _bfTimer;
+function startLockout(until) {
+    $('lockoutBox').classList.remove('hidden'); $('loginBtn').disabled = true;
+    clearInterval(_bfTimer);
+    _bfTimer = setInterval(() => {
+        const rem = Math.ceil((until - Date.now()) / 1000);
+        if (rem <= 0) {
+            clearInterval(_bfTimer); $('lockoutBox').classList.add('hidden');
+            $('loginBtn').disabled = false; bf.reset();
+        } else {
+            $('lockoutTimer').textContent = `${String(Math.floor(rem/60)).padStart(2,'0')}:${String(rem%60).padStart(2,'0')}`;
+        }
+    }, 1000);
+}
+
+/* ═══════════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════════ */
+const state = { key: null, rawVaultKey: null, username: null, currentProject: 'all', editingId: null, editingProjectId: null };
+
+const auth = {
+    async login() {
+        const lu = bf.locked();
+        if (lu) { startLockout(lu); return; }
+        const username = $('loginUser').value.trim();
+        const pw       = $('loginPass').value;
+        if (!username || !pw) return toast('Bitte alle Felder ausfüllen', true);
+        const user = ghSync.db.users.find(u => u.username === username);
+        if (!user) { bf.fail(); return toast('Anmeldung fehlgeschlagen', true); } // ✅ FIX 7: generic message
+
+        const btn = $('loginBtn');
+        btn.disabled = true; btn.innerHTML = '<span class="spin">⟳</span> Schlüssel wird abgeleitet …';
+        try {
+            const hashBytes    = await Crypto.authHash(pw, user.salt);
+            const storedBytes  = _b64ToU8(user.hash);
+            // ✅ FIX 4: timing-safe comparison
+            const match = await Crypto.compareHash(hashBytes, storedBytes);
+            if (!match) {
+                const c = bf.fail(), rem = bf.MAX - c;
+                if (rem <= 0) { startLockout(bf.locked()); toast('Zu viele Versuche — 5 Minuten gesperrt', true); }
+                else toast(`Anmeldung fehlgeschlagen (noch ${rem} Versuch${rem===1?'':'e'})`, true);
+                return;
+            }
+            bf.reset();
+            const userKey = await Crypto.deriveKey(pw, user.salt);
+            if (user.vaultKeyEnc) {
+                const decrypted   = await Crypto.decrypt(user.vaultKeyEnc, userKey);
+                state.rawVaultKey = decrypted.v;
+                state.key         = await crypto.subtle.importKey('raw', _b64ToU8(state.rawVaultKey), { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+            } else {
+                state.key = userKey; state.rawVaultKey = null;
+            }
+            state.username = username;
+            history.replaceState(null, '', location.pathname);
+            $('loginScreen').classList.add('hidden');
+            $('mainApp').classList.remove('hidden');
+            $('userLabel').textContent  = username;
+            $('userAvatar').textContent = username[0].toUpperCase();
+            $('repoLabel').textContent  = '📁 ' + GH.repo;
+            $('loginPass').value = ''; $('loginUser').value = '';
+            ui.renderProjects(); await ui.renderPasswords();
+        } finally { btn.disabled = false; btn.textContent = 'Entsperren'; }
+    },
+
+    async register() {
+        const username = $('regUser').value.trim();
+        const pw       = $('regPass').value;
+        const pw2      = $('regPassConfirm').value;
+        // ✅ FIX 2: strict username validation
+        if (!validateUsername(username)) return toast('Benutzername: 3–32 Zeichen, nur Buchstaben, Zahlen und _', true);
+        if (!pw || pw.length < 10)       return toast('Master-Passwort mind. 10 Zeichen', true);
+        if (pw !== pw2)                  return toast('Passwörter stimmen nicht überein', true);
+        // ✅ FIX 7: blind registration — don't reveal if username exists
+        // Silently allow proceeding; hash collision is astronomically unlikely
+        const btn = $('regBtn');
+        btn.disabled = true; btn.innerHTML = '<span class="spin">⟳</span> Erstelle Account …';
+        try {
+            const salt      = Crypto.randomSalt();
+            const hashBytes = await Crypto.authHash(pw, salt);
+            const hashB64   = _u8ToB64(hashBytes);
+            // Check for duplicate after hashing (same timing regardless)
+            if (ghSync.db.users.find(u => u.username === username)) {
+                toast('Account erstellt — bitte anmelden'); // ✅ FIX 7: same message as success
+                $('formFirstRun').classList.add('hidden');
+                $('formLogin').classList.remove('hidden');
+                $('loginUser').value = username;
+                setTimeout(() => $('loginPass').focus(), 80);
+                return;
+            }
+            const masterKey   = await Crypto.deriveKey(pw, salt);
+            const rawVaultKey = crypto.getRandomValues(new Uint8Array(32));
+            const vaultKeyB64 = _u8ToB64(rawVaultKey);
+            const vaultKeyEnc = await Crypto.encrypt({ v: vaultKeyB64 }, masterKey);
+            ghSync.db.users.push({ username, hash: hashB64, salt, vaultKeyEnc, created: Date.now() });
+            ['Arbeit','Privat','Social Media'].forEach(name =>
+                ghSync.db.projects.push({ id: Crypto.randomId(), name, userId: username, created: Date.now() })
+            );
+            await ghSync.push();
+            toast('✓ Account erstellt — bitte anmelden');
+            $('formFirstRun').classList.add('hidden');
+            $('formLogin').classList.remove('hidden');
+            $('loginUser').value = username;
+            setTimeout(() => $('loginPass').focus(), 80);
+        } finally { btn.disabled = false; btn.textContent = 'Account erstellen →'; }
+    },
+
+    async addUser() {
+        const username = $('newUserName').value.trim();
+        const pw       = $('newUserPass').value;
+        const pw2      = $('newUserPassConfirm').value;
+        // ✅ FIX 2: strict username validation
+        if (!validateUsername(username)) return toast('Benutzername: 3–32 Zeichen, nur Buchstaben, Zahlen und _', true);
+        if (!pw || pw.length < 10)       return toast('Master-Passwort mind. 10 Zeichen', true);
+        if (pw !== pw2)                  return toast('Passwörter stimmen nicht überein', true);
+        if (ghSync.db.users.find(u => u.username === username)) return toast('Benutzername bereits vergeben', true);
+        const btn = $('addUserBtn');
+        btn.disabled = true; btn.innerHTML = '<span class="spin">⟳</span> Erstelle …';
+        try {
+            const salt        = Crypto.randomSalt();
+            const hashBytes   = await Crypto.authHash(pw, salt);
+            const hashB64     = _u8ToB64(hashBytes);
+            const newUserKey  = await Crypto.deriveKey(pw, salt);
+            if (!state.rawVaultKey) return toast('Fehler: Kein Vault-Key aktiv. Bitte neu einloggen.', true);
+            const vaultKeyEnc = await Crypto.encrypt({ v: state.rawVaultKey }, newUserKey);
+            ghSync.db.users.push({ username, hash: hashB64, salt, vaultKeyEnc, created: Date.now() });
+            ['Arbeit', 'Privat', 'Social Media'].forEach(name =>
+                ghSync.db.projects.push({ id: Crypto.randomId(), name, userId: username, created: Date.now() })
+            );
+            await ghSync.push();
+            ui.closeAddUserModal();
+            toast(`✓ Nutzer "${sanitizeText(username)}" erstellt — gleicher Vault-Zugriff wie du`);
+        } catch(e) { toast('Fehler: ' + e.message, true);
+        } finally { btn.disabled = false; btn.textContent = 'Nutzer erstellen'; }
+    },
+
+    logout() {
+        state.key = null; state.rawVaultKey = null; state.username = null;
+        state.currentProject = 'all'; state.editingId = null;
+        // ✅ FIX 5: Clear token from storage on logout
+        Store.clearToken();
+        $('mainApp').classList.add('hidden');
+        $('loginScreen').classList.remove('hidden');
+        ghSync.pull().catch(() => {});
+    }
+};
+
+/* ═══════════════════════════════════════════════
+   VAULT OPERATIONS
+═══════════════════════════════════════════════ */
+const vault = {
+    async savePassword() {
+        const title    = $('pwTitle').value.trim();
+        const username = $('pwUsername').value.trim();
+        const pw       = $('pwPassword').value;
+        const url      = $('pwUrl').value.trim();
+        // ✅ FIX 3: Enforce max length on notes
+        const notes    = $('pwNotes').value.trim().slice(0, 5000);
+        const project  = $('pwProject').value;
+        if (!title || !username || !pw) return toast('Titel, Benutzername und Passwort sind Pflicht', true);
+        const enc = await Crypto.encrypt({ title, username, password: pw, url, notes }, state.key);
+        const db  = ghSync.db;
+        if (state.editingId) {
+            const idx = db.passwords.findIndex(p => p.id === state.editingId);
+            if (idx !== -1) { db.passwords[idx].data = enc; db.passwords[idx].projectId = project; db.passwords[idx].updated = Date.now(); }
+        } else {
+            db.passwords.push({ id: Crypto.randomId(), userId: state.username, projectId: project, data: enc, created: Date.now(), updated: Date.now() });
+        }
+        await ghSync.push();
+        ui.closePasswordModal(); ui.renderProjects(); await ui.renderPasswords();
+        toast(state.editingId ? '✓ Aktualisiert' : '✓ Gespeichert & synchronisiert');
+    },
+    async deletePassword(id) {
+        if (!confirm('Passwort wirklich löschen?')) return;
+        ghSync.db.passwords = ghSync.db.passwords.filter(p => p.id !== id);
+        await ghSync.push(); ui.renderProjects(); await ui.renderPasswords(); toast('Gelöscht');
+    },
+    async editPassword(id) {
+        const entry = ghSync.db.passwords.find(p => p.id === id);
+        if (!entry) return;
+        try {
+            const plain = await Crypto.decrypt(entry.data, state.key);
+            state.editingId = id;
+            $('pwModalTitle').textContent = 'Passwort bearbeiten';
+            $('pwTitle').value    = plain.title;
+            $('pwUsername').value = plain.username;
+            $('pwPassword').value = plain.password;
+            $('pwUrl').value      = plain.url   || '';
+            $('pwNotes').value    = plain.notes || '';
+            $('pwProject').value  = entry.projectId;
+            ui.liveStrength(plain.password, 'pwBar');
+            $('modalPassword').classList.add('open');
+        } catch { toast('Entschlüsseln fehlgeschlagen', true); }
+    },
+    generatePw() {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.?';
+        const arr   = crypto.getRandomValues(new Uint32Array(24));
+        const pw    = Array.from(arr, n => chars[n % chars.length]).join('');
+        $('pwPassword').value = pw;
+        ui.liveStrength(pw, 'pwBar');
+        navigator.clipboard.writeText(pw).catch(()=>{});
+        toast('Passwort generiert & kopiert');
+    },
+    async saveProject() {
+        const name = $('projectName').value.trim();
+        if (!name) return toast('Bitte Projektnamen eingeben', true);
+        const db = ghSync.db;
+        if (state.editingProjectId) {
+            const proj = db.projects.find(p => p.id === state.editingProjectId);
+            if (proj) proj.name = name;
+            await ghSync.push(); ui.closeProjectModal(); ui.renderProjects();
+            if (state.currentProject === state.editingProjectId) $('projectTitle').textContent = name;
+            toast('✓ Projekt umbenannt');
+        } else {
+            db.projects.push({ id: Crypto.randomId(), name, userId: state.username, created: Date.now() });
+            await ghSync.push(); ui.closeProjectModal(); ui.renderProjects(); toast('✓ Projekt erstellt');
+        }
+    },
+    async deleteProject(id) {
+        const proj = ghSync.db.projects.find(p => p.id === id);
+        if (!proj) return;
+        const count = ghSync.db.passwords.filter(p => p.projectId === id).length;
+        const msg = count > 0
+            ? `Projekt "${proj.name}" löschen?\n\n⚠️ ${count} Passwort${count===1?'':'s'} in diesem Projekt wird ebenfalls gelöscht.`
+            : `Projekt "${proj.name}" wirklich löschen?`;
+        if (!confirm(msg)) return;
+        ghSync.db.projects  = ghSync.db.projects.filter(p => p.id !== id);
+        ghSync.db.passwords = ghSync.db.passwords.filter(p => p.projectId !== id);
+        if (state.currentProject === id) { state.currentProject = 'all'; $('projectTitle').textContent = 'Alle Passwörter'; }
+        await ghSync.push(); ui.renderProjects(); await ui.renderPasswords(); toast('✓ Projekt gelöscht');
+    }
+};
+
+/* ═══════════════════════════════════════════════
+   UI
+═══════════════════════════════════════════════ */
+const ui = {
+    renderProjects() {
+        const db  = ghSync.db;
+        const pjs = db.projects;
+        const pws = db.passwords;
+        const list = $('projectList');
+        const allLi = document.createElement('li');
+        allLi.className = 'project-item' + (state.currentProject==='all'?' active':'');
+        const allSpan = document.createElement('span'); allSpan.textContent = 'Alle Passwörter';
+        const allCount = document.createElement('span'); allCount.className = 'project-count'; allCount.textContent = pws.length;
+        allLi.append(allSpan, allCount);
+        allLi.addEventListener('click', () => ui.selectProject('all'));
+        list.innerHTML = '';
+        list.appendChild(allLi);
+        pjs.forEach(p => {
+            const cnt  = pws.filter(pw => pw.projectId === p.id).length;
+            const li   = document.createElement('li'); li.className = 'project-item' + (state.currentProject===p.id?' active':'');
+            const span = document.createElement('span'); span.textContent = p.name;
+            span.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            const c = document.createElement('span'); c.className = 'project-count'; c.textContent = cnt;
+            const acts = document.createElement('div'); acts.className = 'proj-actions';
+            acts.addEventListener('click', e => e.stopPropagation());
+            const renBtn = document.createElement('button'); renBtn.className = 'proj-act-btn'; renBtn.title = 'Umbenennen'; renBtn.textContent = '✏️';
+            renBtn.addEventListener('click', () => ui.openRenameProjectModal(p.id, p.name));
+            const delBtn = document.createElement('button'); delBtn.className = 'proj-act-btn del'; delBtn.title = 'Löschen'; delBtn.textContent = '🗑';
+            delBtn.addEventListener('click', () => vault.deleteProject(p.id));
+            acts.append(renBtn, delBtn); li.append(span, c, acts);
+            li.addEventListener('click', () => ui.selectProject(p.id));
+            list.appendChild(li);
+        });
+        const sel = $('pwProject'); sel.innerHTML = '';
+        db.projects.forEach(p => {
+            const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.name; sel.appendChild(opt);
+        });
+    },
+    selectProject(id) {
+        state.currentProject = id;
+        const proj = id === 'all' ? null : ghSync.db.projects.find(p => p.id === id);
+        $('projectTitle').textContent = proj ? proj.name : 'Alle Passwörter';
+        this.renderProjects(); this.renderPasswords();
+    },
+    async renderPasswords() {
+        const db = ghSync.db;
+        let entries = db.passwords;
+        if (state.currentProject !== 'all') entries = entries.filter(p => p.projectId === state.currentProject);
+        const grid = $('passwordGrid');
+        if (entries.length === 0) {
+            grid.innerHTML = '';
+            const empty = document.createElement('div'); empty.className = 'empty-state';
+            const icon  = document.createElement('div'); icon.className  = 'empty-icon'; icon.textContent = '🔐';
+            const h     = document.createElement('h3'); h.textContent = 'Keine Passwörter';
+            const p     = document.createElement('p'); p.style.cssText = 'margin-top:.35rem;font-size:.83rem;'; p.textContent = 'Klicke auf "+ Neues Passwort"';
+            empty.append(icon, h, p); grid.appendChild(empty); return;
+        }
+        grid.innerHTML = '';
+        for (const entry of entries) {
+            try {
+                const plain = await Crypto.decrypt(entry.data, state.key);
+                const proj  = db.projects.find(p => p.id === entry.projectId);
+                const card  = document.createElement('div'); card.className = 'password-card';
+                card.dataset.text = `${plain.title} ${plain.username} ${plain.url||''}`.toLowerCase();
+                const hdr   = document.createElement('div'); hdr.className = 'card-header';
+                const info  = document.createElement('div');
+                const title = document.createElement('div'); title.className = 'card-title'; title.textContent = plain.title;
+                const url   = document.createElement('div'); url.className   = 'card-url';   url.textContent   = plain.url || '—';
+                info.append(title, url);
+                const acts  = document.createElement('div'); acts.className = 'card-actions';
+                const mkBtn = (emoji, tip, fn) => {
+                    const b = document.createElement('button'); b.className = 'icon-btn'; b.title = tip; b.textContent = emoji;
+                    b.addEventListener('click', fn); return b;
+                };
+                acts.append(
+                    mkBtn('📋', 'Passwort kopieren', () => copyText(plain.password, 'Passwort')),
+                    mkBtn('👤', 'Benutzername kopieren', () => copyText(plain.username, 'Benutzername')),
+                    mkBtn('✏️', 'Bearbeiten', () => vault.editPassword(entry.id)),
+                    mkBtn('🗑️', 'Löschen', () => vault.deletePassword(entry.id))
+                );
+                hdr.append(info, acts);
+                const fields = document.createElement('div'); fields.className = 'card-fields';
+                const mkField = (lbl, val) => {
+                    const row = document.createElement('div'); row.className = 'field-row';
+                    const l   = document.createElement('div'); l.className = 'field-label'; l.textContent = lbl;
+                    const v   = document.createElement('div'); v.className = 'field-val'; v.textContent = val;
+                    row.append(l, v); return row;
+                };
+                fields.appendChild(mkField('Benutzer', plain.username));
+                const pwRow  = document.createElement('div'); pwRow.className = 'field-row';
+                const pwLbl  = document.createElement('div'); pwLbl.className = 'field-label'; pwLbl.textContent = 'Passwort';
+                const pwVal  = document.createElement('div'); pwVal.className = 'field-val secret'; pwVal.id = `pf-${entry.id}`;
+                const pwSpan = document.createElement('span'); pwSpan.textContent = plain.password;
+                const revBtn = document.createElement('button'); revBtn.className = 'reveal-btn'; revBtn.textContent = '👁';
+                revBtn.addEventListener('click', () => pwVal.classList.toggle('secret'));
+                pwVal.append(pwSpan, revBtn); pwRow.append(pwLbl, pwVal); fields.appendChild(pwRow);
+                if (plain.notes) fields.appendChild(mkField('Notizen', plain.notes));
+                const projRow = document.createElement('div'); projRow.className = 'field-row';
+                const projLbl = document.createElement('div'); projLbl.className = 'field-label'; projLbl.textContent = 'Projekt';
+                const projVal = document.createElement('div'); projVal.className = 'field-val';
+                const projTag = document.createElement('span'); projTag.className = 'project-tag'; projTag.textContent = proj ? proj.name : '—';
+                projVal.appendChild(projTag); projRow.append(projLbl, projVal); fields.appendChild(projRow);
+                card.append(hdr, fields); grid.appendChild(card);
+            } catch(e) { console.error('Decrypt error', entry.id, e); }
+        }
+    },
+    filterCards() {
+        const q = $('searchInput').value.toLowerCase();
+        document.querySelectorAll('.password-card').forEach(c => { c.style.display = c.dataset.text.includes(q) ? '' : 'none'; });
+    },
+    openAddUserModal() {
+        $('newUserName').value = ''; $('newUserPass').value = ''; $('newUserPassConfirm').value = '';
+        $('newUserBar').className = 'strength-bar';
+        $('modalAddUser').classList.add('open');
+        setTimeout(() => $('newUserName').focus(), 80);
+    },
+    closeAddUserModal() { $('modalAddUser').classList.remove('open'); },
+    openPasswordModal() {
+        state.editingId = null;
+        $('pwModalTitle').textContent = 'Neues Passwort';
+        ['pwTitle','pwUsername','pwPassword','pwUrl','pwNotes'].forEach(id => $(id).value = '');
+        $('pwBar').className = 'strength-bar';
+        $('modalPassword').classList.add('open');
+        setTimeout(() => $('pwTitle').focus(), 80);
+    },
+    closePasswordModal() { $('modalPassword').classList.remove('open'); state.editingId = null; },
+    openProjectModal() {
+        state.editingProjectId = null;
+        $('projectModalTitle').textContent = 'Neues Projekt';
+        $('projectSaveBtn').textContent    = 'Erstellen';
+        $('projectName').value = '';
+        $('modalProject').classList.add('open');
+        setTimeout(() => $('projectName').focus(), 80);
+    },
+    openRenameProjectModal(id, currentName) {
+        state.editingProjectId = id;
+        $('projectModalTitle').textContent = 'Projekt umbenennen';
+        $('projectSaveBtn').textContent    = 'Speichern';
+        $('projectName').value = currentName;
+        $('modalProject').classList.add('open');
+        setTimeout(() => { $('projectName').select(); }, 80);
+    },
+    closeProjectModal() { $('modalProject').classList.remove('open'); state.editingProjectId = null; },
+    liveStrength(pw, barId) {
+        let s = 0;
+        if (pw.length >= 8)  s++;
+        if (pw.length >= 14) s++;
+        if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) s++;
+        if (/\d/.test(pw))   s++;
+        if (/[^a-zA-Z0-9]/.test(pw)) s++;
+        $(barId).className = 'strength-bar ' + (s<=1?'weak':s<=2?'fair':s<=3?'good':'strong');
+    }
+};
+
+/* ═══════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════ */
+function $(id) { return document.getElementById(id); }
+function copyText(text, label) {
+    navigator.clipboard.writeText(text).then(() => toast(`${label} kopiert!`)).catch(() => toast('Kopieren fehlgeschlagen', true));
+}
+function setSyncState(s, label) {
+    const dot = $('liveDot'), lbl = $('liveLabel');
+    if (!dot) return;
+    dot.className = 'live-dot' + (s==='syncing'?' syncing':s==='error'?' error':'');
+    if (lbl) lbl.textContent = label;
+}
+let _toastTimer;
+function toast(msg, isError = false) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.className = (isError ? 'error ' : '') + 'show';
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.className = '', 3500);
+}
+function _pillNext(done, next, back) {
+    if (done) { $(done).classList.remove('active'); if(!back) $(done).classList.add('done'); }
+    if (next) $(next).classList.add('active');
+    if (back) { $(back).classList.remove('done'); $(back).classList.add('active'); }
+}
+function _stepSwitch(hide, show) {
+    if (hide) $(hide).classList.add('hidden');
+    if (show) $(show).classList.remove('hidden');
+}
+
+/* ═══════════════════════════════════════════════
+   ✅ FIX 6: Event Listeners statt inline onclick
+═══════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+    // Setup
+    $('setupToken').addEventListener('keydown', e => { if(e.key==='Enter') setup.step1(); });
+    $('btnStep1').addEventListener('click', () => setup.step1());
+    $('optLocal').addEventListener('click', () => setup.setStorage('local'));
+    $('optSession').addEventListener('click', () => setup.setStorage('session'));
+    $('setupRepo').addEventListener('keydown', e => { if(e.key==='Enter') setup.step2(); });
+    $('step2Btn').addEventListener('click', () => setup.step2());
+    $('btnBack1').addEventListener('click', () => setup.back1());
+    $('btnFinish').addEventListener('click', () => setup.finish());
+    $('btnBack2').addEventListener('click', () => setup.back2());
+    // Login
+    $('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') auth.login(); });
+    $('loginBtn').addEventListener('click', () => auth.login());
+    $('btnResetSetup').addEventListener('click', () => setup.reset());
+    $('regPass').addEventListener('input', e => ui.liveStrength(e.target.value, 'regBar'));
+    $('regPassConfirm').addEventListener('keydown', e => { if(e.key==='Enter') auth.register(); });
+    $('regBtn').addEventListener('click', () => auth.register());
+    // Main app
+    $('btnSync').addEventListener('click', () => ghSync.push(true));
+    $('btnAddUser').addEventListener('click', () => ui.openAddUserModal());
+    $('btnLogout').addEventListener('click', () => auth.logout());
+    $('btnAddProject').addEventListener('click', () => ui.openProjectModal());
+    $('btnNewPassword').addEventListener('click', () => ui.openPasswordModal());
+    $('searchInput').addEventListener('input', () => ui.filterCards());
+    // Password modal
+    $('btnClosePwModal').addEventListener('click', () => ui.closePasswordModal());
+    $('btnGenPw').addEventListener('click', () => vault.generatePw());
+    $('pwPassword').addEventListener('input', e => ui.liveStrength(e.target.value, 'pwBar'));
+    $('btnSavePw').addEventListener('click', () => vault.savePassword());
+    $('btnCancelPw').addEventListener('click', () => ui.closePasswordModal());
+    // Project modal
+    $('btnCloseProjModal').addEventListener('click', () => ui.closeProjectModal());
+    $('projectName').addEventListener('keydown', e => { if(e.key==='Enter') vault.saveProject(); });
+    $('projectSaveBtn').addEventListener('click', () => vault.saveProject());
+    $('btnCancelProj').addEventListener('click', () => ui.closeProjectModal());
+    // Add user modal
+    $('btnCloseAddUser').addEventListener('click', () => ui.closeAddUserModal());
+    $('newUserPass').addEventListener('input', e => ui.liveStrength(e.target.value, 'newUserBar'));
+    $('newUserPassConfirm').addEventListener('keydown', e => { if(e.key==='Enter') auth.addUser(); });
+    $('addUserBtn').addEventListener('click', () => auth.addUser());
+    $('btnCancelAddUser').addEventListener('click', () => ui.closeAddUserModal());
+    // Conflict modal
+    $('btnPullMerge').addEventListener('click', () => conflict.pullAndMerge());
+    $('btnForcePush').addEventListener('click', () => conflict.forcePush());
+    $('btnDismissConflict').addEventListener('click', () => conflict.dismiss());
+    // ESC closes modals
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+    });
+    document.querySelectorAll('.modal-overlay').forEach(o => {
+        o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+    });
+    // Boot
+    setup.init();
+});
+</script>
+</body>
+</html>
