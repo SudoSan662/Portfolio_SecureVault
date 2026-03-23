@@ -2,7 +2,7 @@
 
 Zero-Knowledge Passwort-Manager · AES-256-GCM · GitHub als verschlüsselter Cloud-Speicher.
 
-[![Live Demo](https://img.shields.io/badge/Live-GitHub%20Pages-00e07a?style=flat-square&logo=github)](https://SudoSan662.github.io/Portfolio_SecureVault/)
+[![Live Demo](https://img.shields.io/badge/Live-GitHub%20Pages-00e07a?style=flat-square&logo=github)](https://DEIN-USERNAME.github.io/Portfolio_SecureVault/)
 [![Security](https://img.shields.io/badge/Crypto-AES--256--GCM-00e07a?style=flat-square)]()
 [![Zero Knowledge](https://img.shields.io/badge/Architecture-Zero--Knowledge-00e07a?style=flat-square)]()
 [![Tests](https://img.shields.io/badge/Security%20Tests-59%20passed%20·%200%20failed-00e07a?style=flat-square)]()
@@ -193,7 +193,7 @@ gh repo create Portfolio_SecureVault --public --clone
 cd Portfolio_SecureVault
 
 # oder manuell: github.com → New repository → Portfolio_SecureVault
-git clone https://github.com/SudoSan662/Portfolio_SecureVault.git
+git clone https://github.com/DEIN-USERNAME/Portfolio_SecureVault.git
 cd Portfolio_SecureVault
 ```
 
@@ -214,7 +214,7 @@ GitHub Repo → Settings → Pages
 → Save
 ```
 
-Nach ~60 Sekunden live unter `https://SudoSan662.github.io/Portfolio-SecureVault/`
+Nach ~60 Sekunden live unter `https://DEIN-USERNAME.github.io/Portfolio-SecureVault/`
 
 ---
 
