@@ -6,7 +6,7 @@ Zero-Knowledge Passwort-Manager · AES-256-GCM · GitHub als verschlüsselter Cl
 [![Security](https://img.shields.io/badge/Crypto-AES--256--GCM-00e07a?style=flat-square)]()
 [![Zero Knowledge](https://img.shields.io/badge/Architecture-Zero--Knowledge-00e07a?style=flat-square)]()
 [![Tests](https://img.shields.io/badge/Security%20Tests-59%20passed%20·%200%20failed-00e07a?style=flat-square)]()
-[![Version](https://img.shields.io/badge/Version-1.0-00e07a?style=flat-square)]()
+[![Version](https://img.shields.io/badge/Version-1.1-00e07a?style=flat-square)]()
 
 ---
 
@@ -18,7 +18,7 @@ Ideal für Teams, Agenturen und sicherheitsbewusste KMUs die Kundenzugänge verw
 
 ---
 
-## Features (v1.0 · Aktuell)
+## Features (v1.1 · Aktuell)
 
 ### Sicherheit
 - 🔒 **AES-256-GCM** Verschlüsselung — jeder Eintrag einzeln, mit zufälligem IV
@@ -40,6 +40,13 @@ Ideal für Teams, Agenturen und sicherheitsbewusste KMUs die Kundenzugänge verw
 - 👁️ **Reveal Toggle** — Passwörter standardmässig verborgen, per Klick sichtbar
 - 📋 **1-Click Copy** — Passwort und Benutzername einzeln kopierbar
 
+### Password Aging Tracker *(neu in v1.1)*
+- 🟢 **Farbige Age-Badges** auf jeder Passwort-Karte — Grün → Gelb → Orange → Rot
+- ⚠️ **Sidebar-Filter "Zu erneuern"** — zeigt alle abgelaufenen Passwörter auf einen Blick
+- ⚙️ **Konfigurierbarer Schwellenwert** — Standard 90 Tage, einstellbar auf 30 / 60 / 180 / 365 Tage
+- ↻ **Quick-Renew Button** — öffnet Edit-Modal direkt vorausgefüllt für abgelaufene Einträge
+- 🔔 **Warning-Banner** — erscheint automatisch wenn mehr als 5 Passwörter abgelaufen sind
+
 ### Sync & Infrastruktur
 - ☁️ **GitHub API** als verschlüsselter Remote-Speicher — 0€/Monat
 - 🔄 **Conflict Handling** — SHA pre-check + 409 Resolver verhindert Datenverlust
@@ -50,20 +57,7 @@ Ideal für Teams, Agenturen und sicherheitsbewusste KMUs die Kundenzugänge verw
 
 ## Roadmap
 
-### ⏳ Milestone 1 · Password Aging Tracker
-> Status: 🟡 In Planung · Aufwand: ~2 Wochen
-
-Passwörter haben ein Alter. Der Vault zeigt wann ein Passwort zuletzt geändert wurde und warnt ab definierten Schwellenwerten.
-
-- Farbige Age-Badges auf jeder Passwort-Karte (Grün → Gelb → Orange → Rot)
-- Sidebar-Filter **"⚠️ Zu erneuern"** für alle abgelaufenen Passwörter
-- Konfigurierbarer Schwellenwert (Standard: 90 Tage)
-- Quick-Renew Button öffnet Edit-Modal vorausgefüllt
-- Warning-Banner wenn mehr als 5 Passwörter abgelaufen sind
-
----
-
-### 🔌 Milestone 2 · Autofill Browser Extension
+### 🔌 Milestone 1 · Autofill Browser Extension
 > Status: 🔵 Geplant · Aufwand: ~6 Wochen
 
 Passwörter direkt in Login-Felder einfügen ohne Copy-Paste. Die Extension erkennt Login-Formulare automatisch und schlägt passende Einträge vor.
@@ -77,19 +71,20 @@ Passwörter direkt in Login-Felder einfügen ohne Copy-Paste. Die Extension erke
 
 ---
 
-### 🗂️ Milestone 3 · Granulare Projekt-Zugriffskontrolle
+### 🗂️ Milestone 2 · Granulare Projekt-Zugriffskontrolle
 > Status: 🔵 Geplant · Aufwand: ~3 Wochen
 
-Ein Freelancer soll nur Projekt "Autohaus" sehen, nicht alle anderen Kundenprojekte. Mit M4 bekommt jedes Projekt einen eigenen Verschlüsselungs-Key — User erhalten nur die Keys der Projekte auf die sie Zugriff haben.
+Ein Freelancer soll nur Projekt "Autohaus" sehen, nicht alle anderen Kundenprojekte. Mit M2 bekommt jedes Projekt einen eigenen Verschlüsselungs-Key — User erhalten nur die Keys der Projekte auf die sie Zugriff haben.
 
 - Per-Project Keys — jedes Projekt hat eigenen AES-256-GCM Key
 - Rollen-System: **Admin · Member · Viewer · Freelancer** (zeitlich begrenzt)
 - Admin vergibt und entzieht Projektzugänge
 - Key-Rotation bei Offboarding
 - Migration bestehender Vaults automatisch
+
 ---
 
-### 🕊️ Milestone 4 · Nachlass-Funktion (Digital Legacy)
+### 🕊️ Milestone 3 · Nachlass-Funktion (Digital Legacy)
 > Status: 🔵 Geplant · Aufwand: ~4 Wochen
 
 Falls der Vault-Eigentümer den Zugang verliert, soll eine vorher bestimmte Vertrauensperson Zugang erhalten — ohne dass diese Person heute schon Zugang hat.
@@ -147,7 +142,7 @@ Konflikt-Dialog:
 
 ---
 
-## Security Test Results (v1.0)
+## Security Test Results (v1.1)
 
 | Kategorie | Bestanden | Warnings |
 |-----------|-----------|----------|
@@ -180,6 +175,7 @@ Konflikt-Dialog:
 | No Install | ✅ Browser | ❌ App | ❌ App | ❌ App |
 | Open Source | ✅ | ❌ | ✅ | ✅ |
 | Audit-Log | ❌ by design | ✅ | ✅ Enterprise | ❌ |
+| Password Aging | ✅ | ✅ | ✅ | ❌ |
 
 ---
 
@@ -249,7 +245,7 @@ Permissions:
 ## Bekannte Limitierungen
 
 - Kein Audit-Log — Zero-Knowledge by design, der Betreiber sieht nicht was entschlüsselt wird
-- Kein granularer Projektzugang pro User — kommt mit Milestone 4
+- Kein granularer Projektzugang pro User — kommt mit Milestone 2
 - GitHub API Rate Limits bei sehr vielen gleichzeitigen Nutzern
 - Token-Management erfordert GitHub-Konto für jeden User
 
@@ -263,8 +259,18 @@ Permissions:
 - **Fine-grained Access Control** — Token nur für dieses eine Repo
 - **Sofortiger Zugangsentzug** — Token deaktivieren = kein Zugang mehr
 
-*Tradeoffs: Metadaten-Exposition (Sync-Zeitpunkte sichtbar), kein Granular-Access auf Eintrags-Ebene (kommt mit M3), API Rate Limits bei vielen gleichzeitigen Nutzern.*
+*Tradeoffs: Metadaten-Exposition (Sync-Zeitpunkte sichtbar), kein Granular-Access auf Eintrags-Ebene (kommt mit M2), API Rate Limits bei vielen gleichzeitigen Nutzern.*
 
 ---
 
-*SecureVault v1.0 ist produktionsbereit für kleine bis mittelgrosse Teams. Die Milestones 1–4 erweitern die Plattform schrittweise zur vollständigen Enterprise-Lösung.*
+## Changelog
+
+### v1.1
+- ✅ Password Aging Tracker — farbige Age-Badges, Sidebar-Filter, Warning-Banner, Quick-Renew, konfigurierbarer Schwellenwert
+
+### v1.0
+- ✅ Initiales Release — AES-256-GCM, PBKDF2, Multi-User, GitHub Sync, Conflict Handling, Passwort-Generator
+
+---
+
+*SecureVault v1.1 ist produktionsbereit für kleine bis mittelgrosse Teams. Die Milestones 1–3 erweitern die Plattform schrittweise zur vollständigen Enterprise-Lösung.*

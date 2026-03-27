@@ -151,6 +151,25 @@
         @keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.1ms!important;}}
         @media(max-width:700px){.workspace{grid-template-columns:1fr}.sidebar{border-right:none;border-bottom:1px solid var(--border)}.topbar{padding:.65rem 1rem}.live-indicator{display:none}}
+        /* ── Password Aging ── */
+        .age-badge{font-size:.6rem;padding:.15rem .45rem;border-radius:100px;font-family:var(--mono);font-weight:700;white-space:nowrap;flex-shrink:0;letter-spacing:.2px;}
+        .age-fresh{background:rgba(0,224,122,.1);color:var(--accent);border:1px solid rgba(0,224,122,.2);}
+        .age-warn{background:rgba(255,187,0,.1);color:var(--yellow);border:1px solid rgba(255,187,0,.2);}
+        .age-alert{background:rgba(255,140,0,.12);color:#ff8c00;border:1px solid rgba(255,140,0,.25);}
+        .age-expired{background:rgba(255,68,85,.1);color:var(--red);border:1px solid rgba(255,68,85,.25);}
+        .aging-banner{display:flex;align-items:center;gap:.75rem;padding:.7rem 1rem;background:rgba(255,68,85,.06);border:1px solid rgba(255,68,85,.22);border-radius:8px;font-size:.82rem;color:var(--red);margin-bottom:1.1rem;line-height:1.5;}
+        .aging-banner-txt{flex:1;}
+        .aging-banner strong{font-weight:700;}
+        .aging-banner-filter{background:none;border:1px solid rgba(255,68,85,.3);border-radius:6px;color:var(--red);font-size:.72rem;padding:.25rem .6rem;cursor:pointer;font-family:var(--mono);white-space:nowrap;transition:background var(--trans);}
+        .aging-banner-filter:hover{background:rgba(255,68,85,.12);}
+        .project-item.aging-active{background:rgba(255,68,85,.08);color:var(--red);font-weight:600;border:1px solid rgba(255,68,85,.22);}
+        .project-item.aging-active:hover{background:rgba(255,68,85,.14);}
+        .aging-section{margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border);}
+        .aging-threshold{display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;font-size:.67rem;color:var(--dim);}
+        .aging-threshold select{width:auto;padding:.15rem .3rem;font-size:.67rem;background:var(--bg2);border:1px solid var(--border);color:var(--dim);border-radius:5px;}
+        .card-header-meta{display:flex;align-items:center;gap:.4rem;margin-top:.3rem;flex-wrap:wrap;}
+        .quick-renew-btn{background:none;border:1px solid rgba(255,68,85,.25);border-radius:5px;color:var(--red);font-size:.68rem;padding:.15rem .45rem;cursor:pointer;font-family:var(--mono);transition:background var(--trans);}
+        .quick-renew-btn:hover{background:rgba(255,68,85,.1);}
     </style>
 </head>
 <body>
@@ -314,6 +333,20 @@
                     <button class="btn btn-ghost btn-sm" style="width:100%;" id="btnAddProject">+ Projekt</button>
                 </div>
             </div>
+            <div class="aging-section">
+                <div class="sidebar-title">Sicherheit</div>
+                <ul class="project-list" id="agingList"></ul>
+                <div class="aging-threshold">
+                    <span>⏱ Ablauf nach</span>
+                    <select id="agingThreshold">
+                        <option value="30">30 Tagen</option>
+                        <option value="60">60 Tagen</option>
+                        <option value="90" selected>90 Tagen</option>
+                        <option value="180">180 Tagen</option>
+                        <option value="365">1 Jahr</option>
+                    </select>
+                </div>
+            </div>
             <div class="vault-info">
                 <div>🔒 AES-256-GCM</div>
                 <div>🔑 PBKDF2 · 200k iter</div>
@@ -330,6 +363,11 @@
             <div class="search-wrap">
                 <span class="search-icon">🔍</span>
                 <input type="text" id="searchInput" placeholder="Suchen …">
+            </div>
+            <div id="agingBanner" class="aging-banner hidden">
+                <span style="font-size:1.1rem;flex-shrink:0;">⚠️</span>
+                <div class="aging-banner-txt"><strong id="agingBannerCount"></strong> Passwörter sind abgelaufen und sollten erneuert werden.</div>
+                <button class="aging-banner-filter" id="btnAgingBannerFilter">Anzeigen →</button>
             </div>
             <div class="password-grid" id="passwordGrid"></div>
         </main>
@@ -739,7 +777,7 @@ function startLockout(until) {
 /* ═══════════════════════════════════════════════
    AUTH
 ═══════════════════════════════════════════════ */
-const state = { key: null, rawVaultKey: null, username: null, currentProject: 'all', editingId: null, editingProjectId: null };
+const state = { key: null, rawVaultKey: null, username: null, currentProject: 'all', editingId: null, editingProjectId: null, agingFilter: false };
 
 const auth = {
     async login() {
@@ -993,35 +1031,75 @@ const ui = {
     },
     selectProject(id) {
         state.currentProject = id;
-        const proj = id === 'all' ? null : ghSync.db.projects.find(p => p.id === id);
-        $('projectTitle').textContent = proj ? proj.name : 'Alle Passwörter';
+        state.agingFilter = (id === '__aging__');
+        if (id === '__aging__') {
+            $('projectTitle').textContent = '⚠️ Zu erneuern';
+        } else {
+            const proj = id === 'all' ? null : ghSync.db.projects.find(p => p.id === id);
+            $('projectTitle').textContent = proj ? proj.name : 'Alle Passwörter';
+        }
         this.renderProjects(); this.renderPasswords();
     },
     async renderPasswords() {
         const db = ghSync.db;
         let entries = db.passwords;
-        if (state.currentProject !== 'all') entries = entries.filter(p => p.projectId === state.currentProject);
+        if (state.agingFilter) {
+            const expiredIds = await aging.getExpiredIds();
+            entries = entries.filter(e => expiredIds.has(e.id));
+        } else if (state.currentProject !== 'all') {
+            entries = entries.filter(p => p.projectId === state.currentProject);
+        }
         const grid = $('passwordGrid');
         if (entries.length === 0) {
             grid.innerHTML = '';
             const empty = document.createElement('div'); empty.className = 'empty-state';
-            const icon  = document.createElement('div'); icon.className  = 'empty-icon'; icon.textContent = '🔐';
-            const h     = document.createElement('h3'); h.textContent = 'Keine Passwörter';
-            const p     = document.createElement('p'); p.style.cssText = 'margin-top:.35rem;font-size:.83rem;'; p.textContent = 'Klicke auf "+ Neues Passwort"';
-            empty.append(icon, h, p); grid.appendChild(empty); return;
+            const icon  = document.createElement('div'); icon.className  = 'empty-icon';
+            icon.textContent = state.agingFilter ? '✅' : '🔐';
+            const h     = document.createElement('h3');
+            h.textContent = state.agingFilter ? 'Alle Passwörter aktuell' : 'Keine Passwörter';
+            const p     = document.createElement('p'); p.style.cssText = 'margin-top:.35rem;font-size:.83rem;';
+            p.textContent = state.agingFilter ? 'Kein Passwort ist abgelaufen 🎉' : 'Klicke auf "+ Neues Passwort"';
+            empty.append(icon, h, p); grid.appendChild(empty);
+            await aging.refreshUI(); return;
         }
         grid.innerHTML = '';
         for (const entry of entries) {
             try {
                 const plain = await Crypto.decrypt(entry.data, state.key);
                 const proj  = db.projects.find(p => p.id === entry.projectId);
-                const card  = document.createElement('div'); card.className = 'password-card';
+                const days  = aging.getDays(entry);
+                const badge = aging.getBadgeInfo(days);
+                const status = aging.getStatus(days);
+                const card  = document.createElement('div');
+                card.className = 'password-card';
                 card.dataset.text = `${plain.title} ${plain.username} ${plain.url||''}`.toLowerCase();
+                card.dataset.agingStatus = status;
+                // Subtle red border for expired cards
+                if (status === 'expired') card.style.borderColor = 'rgba(255,68,85,.25)';
                 const hdr   = document.createElement('div'); hdr.className = 'card-header';
                 const info  = document.createElement('div');
+                const titleRow = document.createElement('div');
+                titleRow.style.cssText = 'display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;';
                 const title = document.createElement('div'); title.className = 'card-title'; title.textContent = plain.title;
-                const url   = document.createElement('div'); url.className   = 'card-url';   url.textContent   = plain.url || '—';
-                info.append(title, url);
+                const ageBadge = document.createElement('span');
+                ageBadge.className = `age-badge ${badge.cls}`;
+                ageBadge.title = `Zuletzt geändert vor ${days} Tagen`;
+                ageBadge.textContent = badge.label;
+                titleRow.append(title, ageBadge);
+                const url   = document.createElement('div'); url.className = 'card-url'; url.textContent = plain.url || '—';
+                info.append(titleRow, url);
+                // Quick-Renew button for expired/alert entries
+                if (status === 'expired' || status === 'alert') {
+                    const renewRow = document.createElement('div');
+                    renewRow.style.cssText = 'margin-top:.3rem;';
+                    const renewBtn = document.createElement('button');
+                    renewBtn.className = 'quick-renew-btn';
+                    renewBtn.textContent = '↻ Erneuern';
+                    renewBtn.title = 'Passwort jetzt erneuern';
+                    renewBtn.addEventListener('click', () => vault.editPassword(entry.id));
+                    renewRow.appendChild(renewBtn);
+                    info.appendChild(renewRow);
+                }
                 const acts  = document.createElement('div'); acts.className = 'card-actions';
                 const mkBtn = (emoji, tip, fn) => {
                     const b = document.createElement('button'); b.className = 'icon-btn'; b.title = tip; b.textContent = emoji;
@@ -1058,10 +1136,14 @@ const ui = {
                 card.append(hdr, fields); grid.appendChild(card);
             } catch(e) { console.error('Decrypt error', entry.id, e); }
         }
+        await aging.refreshUI();
     },
     filterCards() {
         const q = $('searchInput').value.toLowerCase();
-        document.querySelectorAll('.password-card').forEach(c => { c.style.display = c.dataset.text.includes(q) ? '' : 'none'; });
+        document.querySelectorAll('.password-card').forEach(c => {
+            const textMatch = c.dataset.text.includes(q);
+            c.style.display = textMatch ? '' : 'none';
+        });
     },
     openAddUserModal() {
         $('newUserName').value = ''; $('newUserPass').value = ''; $('newUserPassConfirm').value = '';
@@ -1139,6 +1221,88 @@ function _stepSwitch(hide, show) {
 }
 
 /* ═══════════════════════════════════════════════
+   PASSWORD AGING
+═══════════════════════════════════════════════ */
+const aging = {
+    PREF_KEY: 'sv_aging_days',
+    getThreshold() {
+        return parseInt(localStorage.getItem(this.PREF_KEY) || '90', 10);
+    },
+    setThreshold(days) {
+        localStorage.setItem(this.PREF_KEY, String(days));
+    },
+    // Days since entry was last updated/created
+    getDays(entry) {
+        const ts = entry.updated || entry.created || 0;
+        return Math.floor((Date.now() - ts) / 86_400_000);
+    },
+    // Status: 'fresh' | 'warn' | 'alert' | 'expired'
+    getStatus(days) {
+        const t = this.getThreshold();
+        if (days >= t)               return 'expired';
+        if (days >= Math.round(t * 0.67)) return 'alert';   // ~2/3 of threshold
+        if (days >= Math.round(t * 0.33)) return 'warn';    // ~1/3 of threshold
+        return 'fresh';
+    },
+    // Returns {cls, label} for badge rendering
+    getBadgeInfo(days) {
+        const status = this.getStatus(days);
+        const map = {
+            fresh:   { cls: 'age-fresh',   label: `${days}d ✓` },
+            warn:    { cls: 'age-warn',     label: `${days}d` },
+            alert:   { cls: 'age-alert',    label: `${days}d !` },
+            expired: { cls: 'age-expired',  label: `${days}d ⚠` },
+        };
+        return map[status];
+    },
+    // Count entries that are expired
+    async countExpired() {
+        const db = ghSync.db;
+        if (!db || !db.passwords) return 0;
+        return db.passwords.filter(e => this.getStatus(this.getDays(e)) === 'expired').length;
+    },
+    // Filter entries for aging view
+    async getExpiredIds() {
+        const db = ghSync.db;
+        if (!db || !db.passwords) return new Set();
+        const ids = db.passwords
+            .filter(e => this.getStatus(this.getDays(e)) === 'expired')
+            .map(e => e.id);
+        return new Set(ids);
+    },
+    // Update banner and sidebar aging filter
+    async refreshUI() {
+        const expired = await this.countExpired();
+        const banner  = $('agingBanner');
+        const count   = $('agingBannerCount');
+        if (expired >= 5) {
+            count.textContent = expired;
+            banner.classList.remove('hidden');
+        } else {
+            banner.classList.add('hidden');
+        }
+        // Sidebar aging item
+        const list = $('agingList');
+        if (!list) return;
+        list.innerHTML = '';
+        const li = document.createElement('li');
+        li.className = 'project-item' + (state.currentProject === '__aging__' ? ' aging-active' : '');
+        const icon = document.createElement('span'); icon.textContent = '⚠️ Zu erneuern';
+        icon.style.cssText = 'flex:1;';
+        const badge = document.createElement('span');
+        badge.className = 'project-count';
+        badge.style.cssText = expired > 0 ? 'background:rgba(255,68,85,.15);color:var(--red);' : '';
+        badge.textContent = expired;
+        li.append(icon, badge);
+        li.addEventListener('click', () => ui.selectProject('__aging__'));
+        list.appendChild(li);
+        // Sync threshold select
+        const sel = $('agingThreshold');
+        if (sel) sel.value = String(this.getThreshold());
+    }
+};
+
+/* ═══════════════════════════════════════════════
    ✅ FIX 6: Event Listeners statt inline onclick
 ═══════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
@@ -1194,6 +1358,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.modal-overlay').forEach(o => {
         o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
     });
+    // Aging
+    $('agingThreshold').addEventListener('change', e => {
+        aging.setThreshold(parseInt(e.target.value, 10));
+        aging.refreshUI();
+        if (state.agingFilter) ui.renderPasswords();
+    });
+    $('btnAgingBannerFilter').addEventListener('click', () => ui.selectProject('__aging__'));
     // Boot
     setup.init();
 });
