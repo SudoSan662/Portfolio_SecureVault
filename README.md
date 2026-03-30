@@ -71,16 +71,64 @@ Passwörter direkt in Login-Felder einfügen ohne Copy-Paste. Die Extension erke
 
 ---
 
-### 🗂️ Milestone 2 · Granulare Projekt-Zugriffskontrolle
-> Status: 🔵 Geplant · Aufwand: ~3 Wochen
+### 🗂️ Milestone 2 · Granulare Projekt-Zugriffskontrolle & Schreibrechte
+> Status: 🔵 Geplant · Aufwand: ~4 Wochen
 
-Ein Freelancer soll nur Projekt "Autohaus" sehen, nicht alle anderen Kundenprojekte. Mit M2 bekommt jedes Projekt einen eigenen Verschlüsselungs-Key — User erhalten nur die Keys der Projekte auf die sie Zugriff haben.
+Ein Freelancer soll nur Projekt „Autohaus" sehen, nicht alle anderen Kundenprojekte — und selbst dort nur lesen, nicht bearbeiten. Mit M2 bekommt jedes Projekt einen eigenen Verschlüsselungs-Key, und jeder User erhält beim Einladen nicht nur eine Projektzuweisung, sondern auch eine Berechtigungsstufe: **was** er sieht und **was** er darin tun darf.
 
-- Per-Project Keys — jedes Projekt hat eigenen AES-256-GCM Key
-- Rollen-System: **Admin · Member · Viewer · Freelancer** (zeitlich begrenzt)
-- Admin vergibt und entzieht Projektzugänge
-- Key-Rotation bei Offboarding
-- Migration bestehender Vaults automatisch
+#### Projektzugang
+
+Der Admin bestimmt beim Erstellen eines Accounts oder nachträglich, auf welche Projekte ein User überhaupt Zugriff hat. Ein User ohne Projektzugang erhält den Verschlüsselungs-Key dieses Projekts nie — er kann die Einträge technisch nicht entschlüsseln, auch nicht mit direktem API-Zugriff auf das Repository.
+
+- Per-Project Keys — jedes Projekt hat einen eigenen AES-256-GCM Key
+- User erhalten nur die Keys der Projekte, für die sie freigeschaltet sind
+- Key-Rotation bei Offboarding — entzogene Keys werden neu generiert
+- Migration bestehender Vaults automatisch beim Upgrade
+
+#### Schreib- und Leserechte pro Projekt
+
+Zusätzlich zum Projektzugang wird beim Anlegen eines Accounts pro Projekt eine Berechtigungsstufe vergeben. Diese legt fest ob ein User in einem Projekt nur lesen oder auch aktiv Einträge verwalten kann.
+
+| Stufe | Sehen | Kopieren | Anlegen | Bearbeiten | Löschen |
+|-------|-------|----------|---------|------------|---------|
+| **Kein Zugang** | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Leser** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Mitarbeiter** | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Verwalter** | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+Die Berechtigungsstufe wird verschlüsselt im Vault gespeichert und beim Login clientseitig ausgelesen. Für jedes Projekt kann ein User eine andere Stufe haben — z.B. Leser in „Kunde A" und Mitarbeiter in „Kunde B".
+
+#### Ablauf beim Einladen eines neuen Users
+
+```
+Admin öffnet "Nutzer erstellen"
+        │
+        ▼
+Benutzername + Master-Passwort festlegen
+        │
+        ▼
+Projekte auswählen → pro Projekt: Leser / Mitarbeiter / Verwalter
+        │
+        ▼
+System verschlüsselt die freigegebenen Project-Keys
+mit dem neuen User-Key und speichert sie im Vault
+```
+
+Der neue User sieht nach dem Login ausschliesslich die Projekte, für die er freigeschaltet wurde. Die Berechtigungsstufe steuert, welche UI-Elemente sichtbar sind und welche Schreiboperationen serverseitig erlaubt werden.
+
+#### Rollen-Übersicht (vollständiges System ab M2)
+
+| Rolle | Beschreibung | Typischer Einsatz |
+|-------|--------------|-------------------|
+| **Admin** | Voller Zugriff auf alle Projekte und alle Verwaltungsfunktionen | Vault-Eigentümer |
+| **Verwalter** | Lesen, schreiben und löschen in zugewiesenen Projekten | Senior-Teammitglied |
+| **Mitarbeiter** | Lesen und schreiben (kein Löschen) in zugewiesenen Projekten | Reguläres Teammitglied |
+| **Leser** | Nur lesen und kopieren in zugewiesenen Projekten | Freelancer, externer Zugang |
+
+- Admin vergibt und entzieht Projektzugänge und Berechtigungsstufen jederzeit
+- Berechtigungsänderungen sind sofort wirksam — beim nächsten Speichern greift die neue Stufe
+- Zeitlich begrenzte Accounts möglich: Ablaufdatum beim Erstellen setzbar (ideal für Freelancer-Projekte)
+
 
 ---
 
