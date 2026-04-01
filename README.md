@@ -58,7 +58,7 @@ Ideal für Teams, Agenturen und sicherheitsbewusste KMUs die Kundenzugänge verw
 ## Roadmap
 
 ### 🔌 Milestone 1 · Autofill Browser Extension
-> Status: 🔵 Geplant · Aufwand: ~6 Wochen
+> Status: 🟢 In Progress · Aufwand: ~6 Wochen
 
 Passwörter direkt in Login-Felder einfügen ohne Copy-Paste. Die Extension erkennt Login-Formulare automatisch und schlägt passende Einträge vor.
 
@@ -295,7 +295,7 @@ Permissions:
 - Kein Audit-Log — Zero-Knowledge by design, der Betreiber sieht nicht was entschlüsselt wird
 - Kein granularer Projektzugang pro User — kommt mit Milestone 2
 - GitHub API Rate Limits bei sehr vielen gleichzeitigen Nutzern
-- Token-Management erfordert GitHub-Konto für jeden User
+
 
 ---
 
